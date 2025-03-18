@@ -1,5 +1,5 @@
 import { TimeRecord } from '../types';
-import { formatDateTime, calculateDuration, formatDuration } from '../utils/formatters';
+import { formatDateTime, calculateDuration, formatDuration, toJSTDate } from '../utils/formatters';
 
 interface RecordsTableProps {
   records: TimeRecord[];
@@ -8,7 +8,7 @@ interface RecordsTableProps {
 const RecordsTable: React.FC<RecordsTableProps> = ({ records }) => {
   // Sort records by date (newest first)
   const sortedRecords = [...records].sort((a, b) => {
-    return new Date(b.clockIn).getTime() - new Date(a.clockIn).getTime();
+    return toJSTDate(b.clockIn).getTime() - toJSTDate(a.clockIn).getTime();
   });
 
   if (sortedRecords.length === 0) {
@@ -32,10 +32,10 @@ const RecordsTable: React.FC<RecordsTableProps> = ({ records }) => {
         </div>
         <div className="table-body">
           {sortedRecords.map(record => {
-            const clockInDate = new Date(record.clockIn);
-            const clockOutDate = record.clockOut ? new Date(record.clockOut) : null;
+            const clockInDate = toJSTDate(record.clockIn);
+            const clockOutDate = record.clockOut ? toJSTDate(record.clockOut) : null;
             const duration = calculateDuration(record.clockIn, record.clockOut);
-            
+
             return (
               <div key={record.id} className="table-row">
                 <div className="table-cell date-cell">

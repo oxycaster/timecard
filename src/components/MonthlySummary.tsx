@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { TimeRecord, MonthlyStats } from '../types';
-import { isCurrentMonth, calculateDuration, formatDuration } from '../utils/formatters';
+import { isCurrentMonth, calculateDuration, formatDuration, toJSTDate } from '../utils/formatters';
 
 interface MonthlySummaryProps {
   records: TimeRecord[];
@@ -19,34 +19,34 @@ const MonthlySummary: React.FC<MonthlySummaryProps> = ({ records, contractHours 
   useEffect(() => {
     // Filter records for current month
     const monthRecords = records.filter(record => isCurrentMonth(record.date));
-    
+
     // Only count completed sessions
     const completedRecords = monthRecords.filter(record => record.clockOut !== null);
-    
+
     // Calculate total minutes
     const totalMinutes = completedRecords.reduce((sum, record) => {
       const duration = calculateDuration(record.clockIn, record.clockOut);
       return sum + (duration || 0);
     }, 0);
-    
+
     // Convert to hours
     const totalHours = totalMinutes / 60;
-    
+
     // Get unique days worked
     const uniqueDays = new Set();
     completedRecords.forEach(record => {
-      const date = new Date(record.date).toLocaleDateString();
+      const date = toJSTDate(record.date).toLocaleDateString();
       uniqueDays.add(date);
     });
-    
+
     const daysWorked = uniqueDays.size;
-    
+
     // Calculate average hours per day
     const averageHoursPerDay = daysWorked > 0 ? totalHours / daysWorked : 0;
-    
+
     // Calculate remaining hours
     const remainingHours = Math.max(0, contractHours - totalHours);
-    
+
     setStats({
       totalHours,
       contractHours,

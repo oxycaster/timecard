@@ -1,5 +1,5 @@
 import { TimeRecord } from '../types';
-import { formatDateTime, calculateDuration, formatDuration, isToday } from '../utils/formatters';
+import { formatDateTime, calculateDuration, formatDuration, isToday, getJSTDateString, getJSTISOString } from '../utils/formatters';
 
 interface CurrentSessionProps {
   activeSession: TimeRecord | null;
@@ -18,14 +18,13 @@ const CurrentSession: React.FC<CurrentSessionProps> = ({ activeSession }) => {
   const clockInTime = formatDateTime(activeSession.clockIn);
   const currentDuration = calculateDuration(
     activeSession.clockIn,
-    new Date().toISOString()
+    getJSTISOString()
   );
   const formattedDuration = formatDuration(currentDuration);
-  
-  // 現在の日付を取得
-  const today = new Date();
-  const todayString = today.toISOString().split('T')[0]; // YYYY-MM-DD形式
-  
+
+  // 現在の日付を取得（JST）
+  const todayString = getJSTDateString(); // YYYY-MM-DD形式（JST）
+
   // セッションの日付が今日と異なる場合のみ「前日からの継続」を表示
   const isPreviousDayContinuation = activeSession.date !== todayString;
 

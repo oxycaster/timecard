@@ -8,6 +8,13 @@ const dotenv = require('dotenv');
 // Load environment variables
 dotenv.config();
 
+// Helper function to convert Date to ISO string (in JST)
+const toISOString = (date) => {
+  // Add 9 hours to convert from UTC to JST
+  const jstDate = new Date(date.getTime() + (9 * 60 * 60 * 1000));
+  return jstDate.toISOString();
+};
+
 const app = express();
 const PORT = process.env.PORT || 3000;
 const SLACK_WEBHOOK_URL = process.env.SLACK_WEBHOOK_URL;
@@ -91,31 +98,31 @@ app.get('/api/records', (req, res) => {
 app.post('/api/clock-in', (req, res) => {
   const data = readData();
   const now = new Date();
-  
+
   // Check if there's already an active session
   const activeSession = data.records.find(record => 
     record.clockOut === null && 
     new Date(record.date).toDateString() === now.toDateString()
   );
-  
+
   if (activeSession) {
     return res.status(400).json({ error: 'Already clocked in' });
   }
-  
+
   const newRecord = {
     id: uuidv4(),
-    clockIn: now.toISOString(),
+    clockIn: toISOString(now),
     clockOut: null,
-    date: now.toISOString().split('T')[0]
+    date: toISOString(now).split('T')[0]
   };
-  
+
   data.records.push(newRecord);
-  
+
   if (writeData(data)) {
     // Send Slack notification
     const timeString = now.toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' });
     sendSlackNotification(`🟢 出勤しました (${timeString})`);
-    
+
     res.status(201).json(newRecord);
   } else {
     res.status(500).json({ error: 'Failed to save record' });
@@ -126,20 +133,20 @@ app.post('/api/clock-in', (req, res) => {
 app.post('/api/clock-out/:id', (req, res) => {
   const { id } = req.params;
   const data = readData();
-  
+
   const recordIndex = data.records.findIndex(record => record.id === id);
-  
+
   if (recordIndex === -1) {
     return res.status(404).json({ error: 'Record not found' });
   }
-  
+
   if (data.records[recordIndex].clockOut !== null) {
     return res.status(400).json({ error: 'Already clocked out' });
   }
-  
+
   const now = new Date();
-  data.records[recordIndex].clockOut = now.toISOString();
-  
+  data.records[recordIndex].clockOut = toISOString(now);
+
   if (writeData(data)) {
     // Calculate duration in hours and minutes
     const startTime = new Date(data.records[recordIndex].clockIn);
@@ -148,12 +155,12 @@ app.post('/api/clock-out/:id', (req, res) => {
     const durationMinutes = Math.floor(durationMs / (1000 * 60));
     const hours = Math.floor(durationMinutes / 60);
     const minutes = durationMinutes % 60;
-    
+
     // Send Slack notification
     const timeString = now.toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' });
     const durationString = `${hours}時間${minutes}分`;
     sendSlackNotification(`🔴 退勤しました (${timeString}) - 勤務時間: ${durationString}`);
-    
+
     res.json(data.records[recordIndex]);
   } else {
     res.status(500).json({ error: 'Failed to update record' });

@@ -1,19 +1,19 @@
 import { useState, useEffect } from 'react';
-import { formatTime, formatDate } from '../utils/formatters';
+import { formatTime, formatDate, toJSTDate, getJSTISOString } from '../utils/formatters';
 
 const CurrentTime: React.FC = () => {
-  const [currentTime, setCurrentTime] = useState<Date>(new Date());
-  
+  const [currentTime, setCurrentTime] = useState<Date>(toJSTDate(getJSTISOString()));
+
   useEffect(() => {
     const timer = setInterval(() => {
-      setCurrentTime(new Date());
+      setCurrentTime(toJSTDate(getJSTISOString()));
     }, 1000);
-    
+
     return () => {
       clearInterval(timer);
     };
   }, []);
-  
+
   return (
     <div className="current-time">
       <div className="date">{formatDate(currentTime)}</div>

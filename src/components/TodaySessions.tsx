@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { TimeRecord, DailySession } from '../types';
-import { isToday, formatDateTime, calculateDuration, formatDuration } from '../utils/formatters';
+import { isToday, formatDateTime, calculateDuration, formatDuration, toJSTDate } from '../utils/formatters';
 
 interface TodaySessionsProps {
   records: TimeRecord[];
@@ -17,8 +17,8 @@ const TodaySessions: React.FC<TodaySessionsProps> = ({ records }) => {
     // 1. 今日出勤かつ今日退勤したレコードを取得
     const todayRecords = records.filter(record => 
       record.clockOut !== null && 
-      isToday(new Date(record.clockIn).toISOString().split('T')[0]) && 
-      isToday(new Date(record.clockOut).toISOString().split('T')[0])
+      isToday(record.clockIn.split('T')[0]) && 
+      isToday(record.clockOut.split('T')[0])
     );
     displayRecords.push(...todayRecords);
 
@@ -37,7 +37,7 @@ const TodaySessions: React.FC<TodaySessionsProps> = ({ records }) => {
 
     // 日付でソートして古い順に並べる（セッション番号を割り当てるため）
     const sortedByOldestRecords = [...displayRecords].sort((a, b) => 
-      new Date(a.clockIn).getTime() - new Date(b.clockIn).getTime()
+      toJSTDate(a.clockIn).getTime() - toJSTDate(b.clockIn).getTime()
     );
 
     // DailySession形式に変換
