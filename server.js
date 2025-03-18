@@ -57,8 +57,8 @@ const sendSlackNotification = async (message) => {
   }
 
   try {
-    // Use node-fetch in CommonJS
-    const fetch = require('node-fetch');
+    // Use dynamic import for node-fetch (ES Module)
+    const { default: fetch } = await import('node-fetch');
     const response = await fetch(SLACK_WEBHOOK_URL, {
       method: 'POST',
       headers: {
