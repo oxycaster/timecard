@@ -1,69 +1,13 @@
-<!DOCTYPE html>
-<html lang="ja">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>勤怠管理システム</title>
-    <link rel="stylesheet" href="styles.css">
-</head>
-<body>
-    <div class="container">
-        <h1>勤怠管理システム</h1>
-        
-        <div class="current-time">
-            <p>現在時刻: <span id="current-time"></span></p>
-        </div>
-        
-        <div class="buttons">
-            <button id="clock-in" class="btn clock-in">出勤</button>
-            <button id="clock-out" class="btn clock-out">退勤</button>
-        </div>
-        
-        <div class="status">
-            <p>ステータス: <span id="status">未出勤</span></p>
-        </div>
-        
-        <div class="today">
-            <h2>本日の勤務</h2>
-            <div class="current-session">
-                <h3>現在のセッション</h3>
-                <p>出勤時間: <span id="today-in">-</span></p>
-                <p>退勤時間: <span id="today-out">-</span></p>
-            </div>
-            <p class="total-hours">合計勤務時間: <span id="today-hours">-</span></p>
-            <div id="today-sessions" class="sessions-list">
-                <!-- Today's sessions will be inserted here -->
-            </div>
-        </div>
-        
-        <div class="monthly-summary">
-            <h2>今月の集計</h2>
-            <p>合計勤務時間: <span id="monthly-hours">0</span> 時間</p>
-            <p>契約時間: 128 時間</p>
-            <p>残り時間: <span id="remaining-hours">128</span> 時間</p>
-            <div class="progress-container">
-                <div id="progress-bar" class="progress-bar"></div>
-            </div>
-        </div>
-        
-        <div class="records">
-            <h2>勤務記録</h2>
-            <table id="records-table">
-                <thead>
-                    <tr>
-                        <th>日付</th>
-                        <th>出勤時間</th>
-                        <th>退勤時間</th>
-                        <th>勤務時間</th>
-                    </tr>
-                </thead>
-                <tbody id="records-body">
-                    <!-- Records will be inserted here -->
-                </tbody>
-            </table>
-        </div>
-    </div>
-    
-    <script src="script.js"></script>
-</body>
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Vite + React + TS</title>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
 </html>

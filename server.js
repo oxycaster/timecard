@@ -1,147 +1,171 @@
 const express = require('express');
-const path = require('path');
-const fetch = require('node-fetch');
-const dotenv = require('dotenv');
-const bodyParser = require('body-parser');
+const cors = require('cors');
 const fs = require('fs');
+const path = require('path');
+const { v4: uuidv4 } = require('uuid');
+const dotenv = require('dotenv');
 
 // Load environment variables
 dotenv.config();
-
-// Path to records file
-const RECORDS_FILE = path.join(__dirname, 'data', 'records.json');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 const SLACK_WEBHOOK_URL = process.env.SLACK_WEBHOOK_URL;
 
 // Middleware
-app.use(express.static(path.join(__dirname, '.')));
-app.use(bodyParser.json());
+app.use(cors());
+app.use(express.json());
+app.use(express.static(path.join(__dirname, 'dist')));
 
-// Helper function to read records from file
-function readRecordsFromFile() {
-    try {
-        if (!fs.existsSync(RECORDS_FILE)) {
-            fs.writeFileSync(RECORDS_FILE, '[]', 'utf8');
-            return [];
-        }
-        const data = fs.readFileSync(RECORDS_FILE, 'utf8');
-        return JSON.parse(data);
-    } catch (error) {
-        console.error('Error reading records file:', error);
-        return [];
+// Data file path
+const DATA_FILE = path.join(__dirname, 'data', 'records.json');
+
+// Helper function to read data
+const readData = () => {
+  try {
+    if (!fs.existsSync(DATA_FILE)) {
+      return { records: [] };
     }
-}
+    const data = fs.readFileSync(DATA_FILE, 'utf8');
+    return JSON.parse(data);
+  } catch (error) {
+    console.error('Error reading data file:', error);
+    return { records: [] };
+  }
+};
 
-// Helper function to write records to file
-function writeRecordsToFile(records) {
-    try {
-        const data = JSON.stringify(records, null, 2);
-        fs.writeFileSync(RECORDS_FILE, data, 'utf8');
-        return true;
-    } catch (error) {
-        console.error('Error writing records file:', error);
-        return false;
+// Helper function to write data
+const writeData = (data) => {
+  try {
+    const dirPath = path.dirname(DATA_FILE);
+    if (!fs.existsSync(dirPath)) {
+      fs.mkdirSync(dirPath, { recursive: true });
     }
-}
+    fs.writeFileSync(DATA_FILE, JSON.stringify(data, null, 2));
+    return true;
+  } catch (error) {
+    console.error('Error writing data file:', error);
+    return false;
+  }
+};
 
-// API endpoint to get records
+// Helper function to send Slack notification
+const sendSlackNotification = async (message) => {
+  if (!SLACK_WEBHOOK_URL) {
+    console.log('Slack webhook URL not configured. Skipping notification.');
+    return;
+  }
+
+  try {
+    // Use node-fetch in CommonJS
+    const fetch = require('node-fetch');
+    const response = await fetch(SLACK_WEBHOOK_URL, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        text: message,
+        channel: '#timecard-notifications' // Change this to your desired channel
+      })
+    });
+
+    if (!response.ok) {
+      throw new Error(`Slack API error: ${response.statusText}`);
+    }
+
+    console.log('Slack notification sent successfully');
+  } catch (error) {
+    console.error('Error sending Slack notification:', error);
+  }
+};
+
+// API Routes
+// Get all records
 app.get('/api/records', (req, res) => {
-    const records = readRecordsFromFile();
-    res.json(records);
+  const data = readData();
+  res.json(data);
 });
 
-// API endpoint to save records
-app.post('/api/records', (req, res) => {
-    const records = req.body;
+// Clock in
+app.post('/api/clock-in', (req, res) => {
+  const data = readData();
+  const now = new Date();
+  
+  // Check if there's already an active session
+  const activeSession = data.records.find(record => 
+    record.clockOut === null && 
+    new Date(record.date).toDateString() === now.toDateString()
+  );
+  
+  if (activeSession) {
+    return res.status(400).json({ error: 'Already clocked in' });
+  }
+  
+  const newRecord = {
+    id: uuidv4(),
+    clockIn: now.toISOString(),
+    clockOut: null,
+    date: now.toISOString().split('T')[0]
+  };
+  
+  data.records.push(newRecord);
+  
+  if (writeData(data)) {
+    // Send Slack notification
+    const timeString = now.toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' });
+    sendSlackNotification(`🟢 出勤しました (${timeString})`);
     
-    if (!Array.isArray(records)) {
-        return res.status(400).json({ 
-            success: false, 
-            message: 'Invalid records format' 
-        });
-    }
-    
-    const success = writeRecordsToFile(records);
-    
-    if (success) {
-        res.json({ success: true });
-    } else {
-        res.status(500).json({ 
-            success: false, 
-            message: 'Failed to save records' 
-        });
-    }
+    res.status(201).json(newRecord);
+  } else {
+    res.status(500).json({ error: 'Failed to save record' });
+  }
 });
 
-// API endpoint for Slack webhook
-app.post('/api/slack-webhook', async (req, res) => {
-    try {
-        const { action, time, hours } = req.body;
-        
-        if (!SLACK_WEBHOOK_URL) {
-            return res.status(500).json({ 
-                success: false, 
-                message: 'Slack webhook URL not configured' 
-            });
-        }
-        
-        const timestamp = new Date(time);
-        const formattedTime = timestamp.toLocaleString('ja-JP', {
-            year: 'numeric',
-            month: '2-digit',
-            day: '2-digit',
-            hour: '2-digit',
-            minute: '2-digit',
-            second: '2-digit'
-        });
-        
-        let message = '';
-        
-        if (action === 'clock-in') {
-            message = `🟢 *出勤しました* - ${formattedTime}`;
-        } else if (action === 'clock-out') {
-            message = `🔴 *退勤しました* - ${formattedTime}\n本日の勤務時間: ${hours} 時間`;
-        } else {
-            return res.status(400).json({ 
-                success: false, 
-                message: 'Invalid action' 
-            });
-        }
-        
-        // Send to Slack
-        const response = await fetch(SLACK_WEBHOOK_URL, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-                channel: '#times_hironao',
-                text: message
-            })
-        });
-        
-        if (!response.ok) {
-            throw new Error(`Slack API error: ${response.statusText}`);
-        }
-        
-        return res.json({ success: true });
-    } catch (error) {
-        console.error('Error sending to Slack:', error);
-        return res.status(500).json({ 
-            success: false, 
-            message: error.message 
-        });
-    }
+// Clock out
+app.post('/api/clock-out/:id', (req, res) => {
+  const { id } = req.params;
+  const data = readData();
+  
+  const recordIndex = data.records.findIndex(record => record.id === id);
+  
+  if (recordIndex === -1) {
+    return res.status(404).json({ error: 'Record not found' });
+  }
+  
+  if (data.records[recordIndex].clockOut !== null) {
+    return res.status(400).json({ error: 'Already clocked out' });
+  }
+  
+  const now = new Date();
+  data.records[recordIndex].clockOut = now.toISOString();
+  
+  if (writeData(data)) {
+    // Calculate duration in hours and minutes
+    const startTime = new Date(data.records[recordIndex].clockIn);
+    const endTime = now;
+    const durationMs = endTime - startTime;
+    const durationMinutes = Math.floor(durationMs / (1000 * 60));
+    const hours = Math.floor(durationMinutes / 60);
+    const minutes = durationMinutes % 60;
+    
+    // Send Slack notification
+    const timeString = now.toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' });
+    const durationString = `${hours}時間${minutes}分`;
+    sendSlackNotification(`🔴 退勤しました (${timeString}) - 勤務時間: ${durationString}`);
+    
+    res.json(data.records[recordIndex]);
+  } else {
+    res.status(500).json({ error: 'Failed to update record' });
+  }
 });
 
-// Serve the main HTML file for all other routes
+// Serve the React app for any other routes
 app.get('*', (req, res) => {
-    res.sendFile(path.join(__dirname, 'index.html'));
+  res.sendFile(path.join(__dirname, 'dist', 'index.html'));
 });
 
-// Start server
+// Start the server
 app.listen(PORT, () => {
-    console.log(`Server running on http://localhost:${PORT}`);
+  console.log(`Server running on port ${PORT}`);
 });

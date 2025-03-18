@@ -1,92 +1,54 @@
-# 勤怠管理システム (Timecard System)
+# React + TypeScript + Vite
 
-月128時間の業務委託契約に対応した勤怠管理システムです。出勤・退勤の記録、月間の稼働時間の集計、Slackへの通知機能を備えています。
+This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
 
-## 機能
+Currently, two official plugins are available:
 
-- 出勤・退勤ボタンによる勤務時間の記録
-- 1日の中で複数回の出勤・退勤に対応（休憩時間の管理が可能）
-- 本日の勤務状況の表示（現在のセッションと過去のセッション一覧）
-- 月間の合計稼働時間の集計と表示
-- 契約時間（128時間）に対する進捗の視覚化
-- 勤務記録の一覧表示
-- Slackへの出勤・退勤通知
+- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react/README.md) uses [Babel](https://babeljs.io/) for Fast Refresh
+- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
 
-## セットアップ
+## Expanding the ESLint configuration
 
-### 必要条件
+If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
 
-- Node.js (v12以上)
-- npm または yarn
-
-### インストール
-
-1. リポジトリをクローンまたはダウンロードします
-
-2. 依存パッケージをインストールします
-
-```bash
-npm install
-# または
-yarn install
+```js
+export default tseslint.config({
+  extends: [
+    // Remove ...tseslint.configs.recommended and replace with this
+    ...tseslint.configs.recommendedTypeChecked,
+    // Alternatively, use this for stricter rules
+    ...tseslint.configs.strictTypeChecked,
+    // Optionally, add this for stylistic rules
+    ...tseslint.configs.stylisticTypeChecked,
+  ],
+  languageOptions: {
+    // other options...
+    parserOptions: {
+      project: ['./tsconfig.node.json', './tsconfig.app.json'],
+      tsconfigRootDir: import.meta.dirname,
+    },
+  },
+})
 ```
 
-### Slack Webhookの設定
+You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
 
-1. [Slack API](https://api.slack.com/messaging/webhooks) にアクセスし、新しいアプリを作成します
-2. 「Incoming Webhooks」を有効にします
-3. 新しいWebhookを作成し、`#times_hironao` チャンネルに接続します
-4. 生成されたWebhook URLをコピーします
-5. `.env.example` ファイルを `.env` にコピーし、`SLACK_WEBHOOK_URL` の値を設定します
+```js
+// eslint.config.js
+import reactX from 'eslint-plugin-react-x'
+import reactDom from 'eslint-plugin-react-dom'
 
-```bash
-cp .env.example .env
+export default tseslint.config({
+  plugins: {
+    // Add the react-x and react-dom plugins
+    'react-x': reactX,
+    'react-dom': reactDom,
+  },
+  rules: {
+    // other rules...
+    // Enable its recommended typescript rules
+    ...reactX.configs['recommended-typescript'].rules,
+    ...reactDom.configs.recommended.rules,
+  },
+})
 ```
-
-`.env` ファイルを編集:
-
-```
-SLACK_WEBHOOK_URL=https://hooks.slack.com/services/YOUR/WEBHOOK/URL
-```
-
-## 使い方
-
-### サーバーの起動
-
-```bash
-npm start
-# または
-yarn start
-```
-
-開発モード（自動再起動）で起動する場合:
-
-```bash
-npm run dev
-# または
-yarn dev
-```
-
-### アプリケーションへのアクセス
-
-ブラウザで http://localhost:3000 にアクセスします。
-
-### 基本的な使い方
-
-1. 「出勤」ボタンをクリックして勤務開始を記録します
-2. 「退勤」ボタンをクリックして勤務終了を記録します
-3. 休憩を取る場合は「退勤」ボタンをクリックし、休憩後に再度「出勤」ボタンをクリックします
-4. 1日の中で複数回の出勤・退勤を繰り返すことができます
-5. 各セッションの勤務時間は自動的に計算され、日次・月次で集計されます
-6. 出勤・退勤時にはSlackの `#times_hironao` チャンネルに通知が送信されます
-
-## データについて
-
-勤務記録はサーバー上のJSONファイル（`data/records.json`）に保存されます。これにより、ブラウザのキャッシュをクリアしても記録が失われることはありません。また、バックアップとしてブラウザのローカルストレージにも保存されるため、サーバーに接続できない場合でも過去の記録を参照できます。
-
-定期的に `data/records.json` ファイルのバックアップを取ることをお勧めします。
-
-## カスタマイズ
-
-- 契約時間を変更する場合は、`script.js` の `CONTRACT_HOURS` 定数を編集してください
-- Slackの通知メッセージをカスタマイズする場合は、`server.js` の該当部分を編集してください
