@@ -6,7 +6,7 @@ import CurrentSession from './components/CurrentSession';
 import TodaySessions from './components/TodaySessions';
 import MonthlySummary from './components/MonthlySummary';
 import RecordsTable from './components/RecordsTable';
-import { fetchRecords } from './utils/api';
+import { fetchRecords, clockOut } from './utils/api';
 import { TimeRecord } from './types';
 import { isToday } from './utils/formatters';
 
@@ -24,9 +24,12 @@ function App() {
       const data = await fetchRecords();
       setRecords(data);
       
-      // Check if there's an active session (clock in without clock out today)
-      const todayRecords = data.filter(record => isToday(record.date));
-      const active = todayRecords.find(record => record.clockOut === null);
+      // 日付に関係なく、未完了のセッション（clockOutがnull）を探す
+      const unfinishedSessions = data.filter(record => record.clockOut === null);
+      // 未完了セッションがある場合は、最新のものをアクティブセッションとして設定
+      const active = unfinishedSessions.length > 0 
+        ? unfinishedSessions.sort((a, b) => new Date(b.clockIn).getTime() - new Date(a.clockIn).getTime())[0]
+        : null;
       
       if (active) {
         setActiveSession(active);
@@ -50,22 +53,32 @@ function App() {
       // Clock in - add new record and set as active
       setRecords(prev => [...prev, record]);
       setActiveSession(record);
+      
+      // データを再取得して最新の状態を確保
+      fetchRecords().then(freshData => {
+        setRecords(freshData);
+      });
     } else {
       // Clock out - update the active record and clear active session
+      if (!activeSession) return;
+      
+      // 一時的にUIを更新（オプティミスティックUI更新）
       setRecords(prev => {
-        if (!activeSession) return prev;
-        
         return prev.map(r => {
           if (r.id === activeSession.id) {
-            // This should be updated with the latest data from the server
-            // but for now we'll just update it locally
             return { ...r, clockOut: new Date().toISOString() };
           }
           return r;
         });
       });
       
-      setActiveSession(null);
+      // サーバーからの応答後、データを再取得
+      clockOut(activeSession.id).then(() => {
+        fetchRecords().then(freshData => {
+          setRecords(freshData);
+          setActiveSession(null);
+        });
+      });
     }
   };
 
@@ -91,15 +104,18 @@ function App() {
           </div>
           
           <div className="right-panel">
-            <TodaySessions records={records} />
+            <MonthlySummary 
+              records={records}
+              contractHours={CONTRACT_HOURS}
+            />
           </div>
         </div>
         
+        <div className="middle-section">
+          <TodaySessions records={records} />
+        </div>
+        
         <div className="bottom-section">
-          <MonthlySummary 
-            records={records}
-            contractHours={CONTRACT_HOURS}
-          />
           <RecordsTable records={records} />
         </div>
       </main>

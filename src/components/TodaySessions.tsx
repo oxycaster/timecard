@@ -11,11 +11,35 @@ const TodaySessions: React.FC<TodaySessionsProps> = ({ records }) => {
   const [totalTime, setTotalTime] = useState<number>(0);
 
   useEffect(() => {
-    // Filter records for today
-    const todayRecords = records.filter(record => isToday(record.date));
+    // 表示するレコードを選択
+    let displayRecords = [];
     
-    // Convert to DailySession format
-    const sessions = todayRecords.map(record => {
+    // 1. 今日の日付のレコードをすべて取得（出勤・退勤の両方）
+    const todayRecords = records.filter(record => isToday(record.date));
+    displayRecords.push(...todayRecords);
+    
+    // 2. 今日でない未完了のセッション（clockOutがnull）のみを取得
+    const nonTodayActiveRecords = records.filter(record => 
+      !isToday(record.date) && record.clockOut === null
+    );
+    displayRecords.push(...nonTodayActiveRecords);
+    
+    // 注：今日でない完了済みセッションは表示しない
+    
+    // 重複を削除
+    displayRecords = displayRecords.filter((record, index, self) => 
+      index === self.findIndex(r => r.id === record.id)
+    );
+    
+    console.log('Display records:', displayRecords); // デバッグ用
+    
+    // 日付でソートして古い順に並べる（セッション番号を割り当てるため）
+    const sortedByOldestRecords = [...displayRecords].sort((a, b) => 
+      new Date(a.clockIn).getTime() - new Date(b.clockIn).getTime()
+    );
+    
+    // DailySession形式に変換
+    const sessions = sortedByOldestRecords.map((record: TimeRecord) => {
       const duration = calculateDuration(record.clockIn, record.clockOut);
       
       return {
@@ -28,8 +52,8 @@ const TodaySessions: React.FC<TodaySessionsProps> = ({ records }) => {
     
     setTodaySessions(sessions);
     
-    // Calculate total time (excluding active sessions)
-    const total = sessions.reduce((sum, session) => {
+    // 完了したセッションの合計時間を計算
+    const total = sessions.reduce((sum: number, session: DailySession) => {
       return sum + (session.duration || 0);
     }, 0);
     
@@ -48,18 +72,32 @@ const TodaySessions: React.FC<TodaySessionsProps> = ({ records }) => {
   return (
     <div className="today-sessions">
       <h3>本日の勤務記録</h3>
-      <div className="sessions-list">
-        {todaySessions.map(session => (
-          <div key={session.id} className="session-item">
-            <div className="time-range">
-              {formatDateTime(session.clockIn)} 
-              {session.clockOut ? ` - ${formatDateTime(session.clockOut)}` : ' (勤務中)'}
+      <div className="today-sessions-table">
+        <div className="table-header">
+          <div className="header-cell session-cell">セッション</div>
+          <div className="header-cell time-cell">出勤時間</div>
+          <div className="header-cell time-cell">退勤時間</div>
+          <div className="header-cell duration-cell">勤務時間</div>
+        </div>
+        <div className="table-body">
+          {/* 降順で表示（新しいセッションが上に来るように） */}
+          {[...todaySessions].reverse().map((session, index) => (
+            <div key={session.id} className="table-row">
+              <div className="table-cell session-cell">
+                セッション {todaySessions.length - index}
+              </div>
+              <div className="table-cell time-cell">
+                {formatDateTime(session.clockIn)}
+              </div>
+              <div className="table-cell time-cell">
+                {session.clockOut ? formatDateTime(session.clockOut) : '勤務中'}
+              </div>
+              <div className="table-cell duration-cell">
+                {formatDuration(session.duration)}
+              </div>
             </div>
-            <div className="duration">
-              {formatDuration(session.duration)}
-            </div>
-          </div>
-        ))}
+          ))}
+        </div>
       </div>
       <div className="total-time">
         <span className="label">本日の合計時間:</span>
