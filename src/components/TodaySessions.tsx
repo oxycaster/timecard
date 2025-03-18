@@ -13,35 +13,37 @@ const TodaySessions: React.FC<TodaySessionsProps> = ({ records }) => {
   useEffect(() => {
     // 表示するレコードを選択
     let displayRecords = [];
-    
-    // 1. 今日の日付のレコードをすべて取得（出勤・退勤の両方）
-    const todayRecords = records.filter(record => isToday(record.date));
-    displayRecords.push(...todayRecords);
-    
-    // 2. 今日でない未完了のセッション（clockOutがnull）のみを取得
-    const nonTodayActiveRecords = records.filter(record => 
-      !isToday(record.date) && record.clockOut === null
+
+    // 1. 今日出勤かつ今日退勤したレコードを取得
+    const todayRecords = records.filter(record => 
+      record.clockOut !== null && 
+      isToday(new Date(record.clockIn).toISOString().split('T')[0]) && 
+      isToday(new Date(record.clockOut).toISOString().split('T')[0])
     );
-    displayRecords.push(...nonTodayActiveRecords);
-    
+    displayRecords.push(...todayRecords);
+
+    // 2. 未完了のセッション（clockOutがnull）をすべて取得（日付に関わらず）
+    const activeRecords = records.filter(record => record.clockOut === null);
+    displayRecords.push(...activeRecords);
+
     // 注：今日でない完了済みセッションは表示しない
-    
+
     // 重複を削除
     displayRecords = displayRecords.filter((record, index, self) => 
       index === self.findIndex(r => r.id === record.id)
     );
-    
+
     console.log('Display records:', displayRecords); // デバッグ用
-    
+
     // 日付でソートして古い順に並べる（セッション番号を割り当てるため）
     const sortedByOldestRecords = [...displayRecords].sort((a, b) => 
       new Date(a.clockIn).getTime() - new Date(b.clockIn).getTime()
     );
-    
+
     // DailySession形式に変換
     const sessions = sortedByOldestRecords.map((record: TimeRecord) => {
       const duration = calculateDuration(record.clockIn, record.clockOut);
-      
+
       return {
         id: record.id,
         clockIn: record.clockIn,
@@ -49,14 +51,14 @@ const TodaySessions: React.FC<TodaySessionsProps> = ({ records }) => {
         duration
       };
     });
-    
+
     setTodaySessions(sessions);
-    
+
     // 完了したセッションの合計時間を計算
     const total = sessions.reduce((sum: number, session: DailySession) => {
       return sum + (session.duration || 0);
     }, 0);
-    
+
     setTotalTime(total);
   }, [records]);
 
