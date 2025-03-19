@@ -1,13 +1,14 @@
 import { useEffect, useState } from 'react';
 import { TimeRecord, MonthlyStats } from '../types';
-import { isCurrentMonth, calculateDuration, formatDuration, toJSTDate } from '../utils/formatters';
+import { isCurrentMonth, calculateDuration, formatDuration, toJSTDate, getJSTISOString } from '../utils/formatters';
 
 interface MonthlySummaryProps {
   records: TimeRecord[];
   contractHours: number;
+  activeSession?: TimeRecord | null;
 }
 
-const MonthlySummary: React.FC<MonthlySummaryProps> = ({ records, contractHours }) => {
+const MonthlySummary: React.FC<MonthlySummaryProps> = ({ records, contractHours, activeSession }) => {
   const [stats, setStats] = useState<MonthlyStats>({
     totalHours: 0,
     contractHours,
@@ -15,6 +16,20 @@ const MonthlySummary: React.FC<MonthlySummaryProps> = ({ records, contractHours 
     daysWorked: 0,
     averageHoursPerDay: 0
   });
+  const [currentTime, setCurrentTime] = useState<string>(getJSTISOString());
+
+  // Update current time every second when there's an active session
+  useEffect(() => {
+    if (!activeSession) return;
+
+    const timer = setInterval(() => {
+      setCurrentTime(getJSTISOString());
+    }, 1000);
+
+    return () => {
+      clearInterval(timer);
+    };
+  }, [activeSession]);
 
   useEffect(() => {
     // Filter records for current month
@@ -23,11 +38,21 @@ const MonthlySummary: React.FC<MonthlySummaryProps> = ({ records, contractHours 
     // Only count completed sessions
     const completedRecords = monthRecords.filter(record => record.clockOut !== null);
 
-    // Calculate total minutes
-    const totalMinutes = completedRecords.reduce((sum, record) => {
+    // Calculate total minutes from completed sessions
+    const completedMinutes = completedRecords.reduce((sum, record) => {
       const duration = calculateDuration(record.clockIn, record.clockOut);
       return sum + (duration || 0);
     }, 0);
+
+    // Calculate minutes from active session if it exists and is in the current month
+    let activeMinutes = 0;
+    if (activeSession && isCurrentMonth(activeSession.date)) {
+      const activeDuration = calculateDuration(activeSession.clockIn, currentTime);
+      activeMinutes = activeDuration || 0;
+    }
+
+    // Total minutes is the sum of completed and active minutes
+    const totalMinutes = completedMinutes + activeMinutes;
 
     // Convert to hours
     const totalHours = totalMinutes / 60;
@@ -38,6 +63,12 @@ const MonthlySummary: React.FC<MonthlySummaryProps> = ({ records, contractHours 
       const date = toJSTDate(record.date).toLocaleDateString();
       uniqueDays.add(date);
     });
+
+    // Add active session day if it exists and is in the current month
+    if (activeSession && isCurrentMonth(activeSession.date)) {
+      const date = toJSTDate(activeSession.date).toLocaleDateString();
+      uniqueDays.add(date);
+    }
 
     const daysWorked = uniqueDays.size;
 
@@ -54,7 +85,7 @@ const MonthlySummary: React.FC<MonthlySummaryProps> = ({ records, contractHours 
       daysWorked,
       averageHoursPerDay
     });
-  }, [records, contractHours]);
+  }, [records, contractHours, activeSession, currentTime]);
 
   return (
     <div className="monthly-summary">

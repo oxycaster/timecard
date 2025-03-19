@@ -107,6 +107,7 @@ function App() {
             <MonthlySummary 
               records={records}
               contractHours={CONTRACT_HOURS}
+              activeSession={activeSession}
             />
           </div>
         </div>
