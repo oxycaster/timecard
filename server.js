@@ -35,7 +35,7 @@ const readConfig = () => {
         slackWebhookUrl: process.env.SLACK_WEBHOOK_URL || '',
         slackChannel: process.env.SLACK_CHANNEL || '',
         slackClockInMessage: '🟢 出勤しました (%time%)',
-        slackClockOutMessage: '🔴 退勤しました (%time%)'
+        slackClockOutMessage: '🔴 退勤しました (%time%) - 勤務時間: %duration%'
       };
     }
     const data = fs.readFileSync(CONFIG_FILE, 'utf8');
@@ -46,7 +46,7 @@ const readConfig = () => {
       config.slackClockInMessage = '🟢 出勤しました (%time%)';
     }
     if (!config.slackClockOutMessage) {
-      config.slackClockOutMessage = '🔴 退勤しました (%time%)';
+      config.slackClockOutMessage = '🔴 退勤しました (%time%) - 勤務時間: %duration%';
     }
 
     return config;
@@ -56,7 +56,7 @@ const readConfig = () => {
       slackWebhookUrl: process.env.SLACK_WEBHOOK_URL || '',
       slackChannel: process.env.SLACK_CHANNEL || '',
       slackClockInMessage: '🟢 出勤しました (%time%)',
-      slackClockOutMessage: '🔴 退勤しました (%time%)'
+      slackClockOutMessage: '🔴 退勤しました (%time%) - 勤務時間: %duration%'
     };
   }
 };
@@ -125,7 +125,7 @@ const writeData = (data) => {
 };
 
 // Helper function to send Slack notification
-const sendSlackNotification = async (messageTemplate, timeString = '') => {
+const sendSlackNotification = async (messageTemplate, timeString = '', durationString = '') => {
   // Debug logging for SLACK_CHANNEL
   console.log('sendSlackNotification called with SLACK_CHANNEL:', SLACK_CHANNEL);
 
@@ -138,8 +138,10 @@ const sendSlackNotification = async (messageTemplate, timeString = '') => {
     // Use dynamic import for node-fetch (ES Module)
     const { default: fetch } = await import('node-fetch');
 
-    // Replace %time% placeholder with actual time
-    const message = messageTemplate.replace('%time%', timeString);
+    // Replace %time% and %duration% placeholders with actual values
+    const message = messageTemplate
+      .replace('%time%', timeString)
+      .replace('%duration%', durationString);
 
     // Ensure channel is properly formatted (should start with # for public channels)
     let channelToUse = SLACK_CHANNEL;
@@ -308,7 +310,7 @@ app.post('/api/clock-out/:id', (req, res) => {
     const timeString = now.toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' });
     const durationString = `${hours}時間${minutes}分`;
     console.log('Preparing to send clock-out notification');
-    const notificationResult = sendSlackNotification(SLACK_CLOCK_OUT_MESSAGE, timeString);
+    const notificationResult = sendSlackNotification(SLACK_CLOCK_OUT_MESSAGE, timeString, durationString);
     console.log('Clock-out notification sent:', notificationResult);
 
     res.json(data.records[recordIndex]);

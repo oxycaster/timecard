@@ -1,0 +1,6 @@
+{
+  "slackWebhookUrl": "",
+  "slackChannel": "#times",
+  "slackClockInMessage": "🟢 出勤しました (%time%)",
+  "slackClockOutMessage": "🔴 退勤しました (%time%) - 勤務時間: %duration%"
+}

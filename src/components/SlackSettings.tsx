@@ -99,7 +99,7 @@ const SlackSettings = () => {
             onChange={handleChange}
             placeholder="🔴 退勤しました (%time%)"
           />
-          <small>%time% は実際の時間に置き換えられます</small>
+          <small>%time% は実際の時間に置き換えられ、%duration%が経過時間に置き換えられます</small>
         </div>
         <button type="submit" disabled={isSaving}>
           {isSaving ? '保存中...' : '保存'}
