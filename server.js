@@ -33,16 +33,30 @@ const readConfig = () => {
     if (!fs.existsSync(CONFIG_FILE)) {
       return { 
         slackWebhookUrl: process.env.SLACK_WEBHOOK_URL || '',
-        slackChannel: process.env.SLACK_CHANNEL || ''
+        slackChannel: process.env.SLACK_CHANNEL || '',
+        slackClockInMessage: '🟢 出勤しました (%time%)',
+        slackClockOutMessage: '🔴 退勤しました (%time%)'
       };
     }
     const data = fs.readFileSync(CONFIG_FILE, 'utf8');
-    return JSON.parse(data);
+    const config = JSON.parse(data);
+
+    // Ensure backward compatibility by providing default values for new fields
+    if (!config.slackClockInMessage) {
+      config.slackClockInMessage = '🟢 出勤しました (%time%)';
+    }
+    if (!config.slackClockOutMessage) {
+      config.slackClockOutMessage = '🔴 退勤しました (%time%)';
+    }
+
+    return config;
   } catch (error) {
     console.error('Error reading config file:', error);
     return { 
       slackWebhookUrl: process.env.SLACK_WEBHOOK_URL || '',
-      slackChannel: process.env.SLACK_CHANNEL || ''
+      slackChannel: process.env.SLACK_CHANNEL || '',
+      slackClockInMessage: '🟢 出勤しました (%time%)',
+      slackClockOutMessage: '🔴 退勤しました (%time%)'
     };
   }
 };
@@ -66,11 +80,15 @@ const writeConfig = (config) => {
 const config = readConfig();
 let SLACK_WEBHOOK_URL = config.slackWebhookUrl || process.env.SLACK_WEBHOOK_URL;
 let SLACK_CHANNEL = config.slackChannel || process.env.SLACK_CHANNEL;
+let SLACK_CLOCK_IN_MESSAGE = config.slackClockInMessage;
+let SLACK_CLOCK_OUT_MESSAGE = config.slackClockOutMessage;
 
 // Log loaded configuration
 console.log('Loaded configuration:');
 console.log('SLACK_WEBHOOK_URL:', SLACK_WEBHOOK_URL ? 'Set' : 'Not set');
 console.log('SLACK_CHANNEL:', SLACK_CHANNEL);
+console.log('SLACK_CLOCK_IN_MESSAGE:', SLACK_CLOCK_IN_MESSAGE);
+console.log('SLACK_CLOCK_OUT_MESSAGE:', SLACK_CLOCK_OUT_MESSAGE);
 
 // Middleware
 app.use(cors());
@@ -107,7 +125,7 @@ const writeData = (data) => {
 };
 
 // Helper function to send Slack notification
-const sendSlackNotification = async (message) => {
+const sendSlackNotification = async (messageTemplate, timeString = '') => {
   // Debug logging for SLACK_CHANNEL
   console.log('sendSlackNotification called with SLACK_CHANNEL:', SLACK_CHANNEL);
 
@@ -119,6 +137,9 @@ const sendSlackNotification = async (message) => {
   try {
     // Use dynamic import for node-fetch (ES Module)
     const { default: fetch } = await import('node-fetch');
+
+    // Replace %time% placeholder with actual time
+    const message = messageTemplate.replace('%time%', timeString);
 
     // Ensure channel is properly formatted (should start with # for public channels)
     let channelToUse = SLACK_CHANNEL;
@@ -177,22 +198,28 @@ app.get('/api/records', (req, res) => {
 app.get('/api/slack-config', (req, res) => {
   res.json({
     webhookUrl: SLACK_WEBHOOK_URL || '',
-    channel: SLACK_CHANNEL || ''
+    channel: SLACK_CHANNEL || '',
+    clockInMessage: SLACK_CLOCK_IN_MESSAGE || '',
+    clockOutMessage: SLACK_CLOCK_OUT_MESSAGE || ''
   });
 });
 
 // Update Slack configuration
 app.post('/api/slack-config', (req, res) => {
-  const { webhookUrl, channel } = req.body;
+  const { webhookUrl, channel, clockInMessage, clockOutMessage } = req.body;
 
   // Update the variables
   SLACK_WEBHOOK_URL = webhookUrl;
   SLACK_CHANNEL = channel;
+  SLACK_CLOCK_IN_MESSAGE = clockInMessage;
+  SLACK_CLOCK_OUT_MESSAGE = clockOutMessage;
 
   // Persist the configuration to file
   const configData = {
     slackWebhookUrl: SLACK_WEBHOOK_URL,
-    slackChannel: SLACK_CHANNEL
+    slackChannel: SLACK_CHANNEL,
+    slackClockInMessage: SLACK_CLOCK_IN_MESSAGE,
+    slackClockOutMessage: SLACK_CLOCK_OUT_MESSAGE
   };
 
   const saveResult = writeConfig(configData);
@@ -206,7 +233,9 @@ app.post('/api/slack-config', (req, res) => {
   // Respond with the updated configuration
   res.json({
     webhookUrl: SLACK_WEBHOOK_URL,
-    channel: SLACK_CHANNEL
+    channel: SLACK_CHANNEL,
+    clockInMessage: SLACK_CLOCK_IN_MESSAGE,
+    clockOutMessage: SLACK_CLOCK_OUT_MESSAGE
   });
 });
 
@@ -238,7 +267,7 @@ app.post('/api/clock-in', (req, res) => {
     // Send Slack notification
     const timeString = now.toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' });
     console.log('Preparing to send clock-in notification');
-    const notificationResult = sendSlackNotification(`🟢 出勤しました (${timeString})`);
+    const notificationResult = sendSlackNotification(SLACK_CLOCK_IN_MESSAGE, timeString);
     console.log('Clock-in notification sent:', notificationResult);
 
     res.status(201).json(newRecord);
@@ -279,7 +308,7 @@ app.post('/api/clock-out/:id', (req, res) => {
     const timeString = now.toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' });
     const durationString = `${hours}時間${minutes}分`;
     console.log('Preparing to send clock-out notification');
-    const notificationResult = sendSlackNotification(`🔴 退勤しました (${timeString}) - 勤務時間: ${durationString}`);
+    const notificationResult = sendSlackNotification(SLACK_CLOCK_OUT_MESSAGE, timeString);
     console.log('Clock-out notification sent:', notificationResult);
 
     res.json(data.records[recordIndex]);

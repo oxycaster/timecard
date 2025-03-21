@@ -23,4 +23,6 @@ export interface MonthlyStats {
 export interface SlackConfig {
   webhookUrl: string;
   channel: string;
+  clockInMessage: string;
+  clockOutMessage: string;
 }

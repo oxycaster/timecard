@@ -65,7 +65,12 @@ export const fetchSlackConfig = async (): Promise<SlackConfig> => {
     return await response.json();
   } catch (error) {
     console.error('Error fetching Slack configuration:', error);
-    return { webhookUrl: '', channel: '' };
+    return { 
+      webhookUrl: '', 
+      channel: '',
+      clockInMessage: '🟢 出勤しました (%time%)',
+      clockOutMessage: '🔴 退勤しました (%time%)'
+    };
   }
 };
 
@@ -86,6 +91,11 @@ export const updateSlackConfig = async (config: SlackConfig): Promise<SlackConfi
     return await response.json();
   } catch (error) {
     console.error('Error updating Slack configuration:', error);
-    return { webhookUrl: '', channel: '' };
+    return { 
+      webhookUrl: '', 
+      channel: '',
+      clockInMessage: '🟢 出勤しました (%time%)',
+      clockOutMessage: '🔴 退勤しました (%time%)'
+    };
   }
 };

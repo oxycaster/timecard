@@ -3,7 +3,12 @@ import { SlackConfig } from '../types';
 import { fetchSlackConfig, updateSlackConfig } from '../utils/api';
 
 const SlackSettings = () => {
-  const [config, setConfig] = useState<SlackConfig>({ webhookUrl: '', channel: '' });
+  const [config, setConfig] = useState<SlackConfig>({ 
+    webhookUrl: '', 
+    channel: '',
+    clockInMessage: '🟢 出勤しました (%time%)',
+    clockOutMessage: '🔴 退勤しました (%time%)'
+  });
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [message, setMessage] = useState('');
@@ -71,6 +76,30 @@ const SlackSettings = () => {
             placeholder="#general"
           />
           <small>空白の場合、Webhook URLのデフォルトチャンネルが使用されます</small>
+        </div>
+        <div className="form-group">
+          <label htmlFor="clockInMessage">出勤時のメッセージ:</label>
+          <input
+            type="text"
+            id="clockInMessage"
+            name="clockInMessage"
+            value={config.clockInMessage}
+            onChange={handleChange}
+            placeholder="🟢 出勤しました (%time%)"
+          />
+          <small>%time% は実際の時間に置き換えられます</small>
+        </div>
+        <div className="form-group">
+          <label htmlFor="clockOutMessage">退勤時のメッセージ:</label>
+          <input
+            type="text"
+            id="clockOutMessage"
+            name="clockOutMessage"
+            value={config.clockOutMessage}
+            onChange={handleChange}
+            placeholder="🔴 退勤しました (%time%)"
+          />
+          <small>%time% は実際の時間に置き換えられます</small>
         </div>
         <button type="submit" disabled={isSaving}>
           {isSaving ? '保存中...' : '保存'}
