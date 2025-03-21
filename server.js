@@ -22,16 +22,60 @@ const toISOString = (date) => {
 
 const app = express();
 const PORT = process.env.PORT || 3000;
-let SLACK_WEBHOOK_URL = process.env.SLACK_WEBHOOK_URL;
-let SLACK_CHANNEL = process.env.SLACK_CHANNEL;
+
+// Data file paths
+const DATA_FILE = path.join(__dirname, 'data', 'records.json');
+const CONFIG_FILE = path.join(__dirname, 'data', 'config.json');
+
+// Helper function to read config
+const readConfig = () => {
+  try {
+    if (!fs.existsSync(CONFIG_FILE)) {
+      return { 
+        slackWebhookUrl: process.env.SLACK_WEBHOOK_URL || '',
+        slackChannel: process.env.SLACK_CHANNEL || ''
+      };
+    }
+    const data = fs.readFileSync(CONFIG_FILE, 'utf8');
+    return JSON.parse(data);
+  } catch (error) {
+    console.error('Error reading config file:', error);
+    return { 
+      slackWebhookUrl: process.env.SLACK_WEBHOOK_URL || '',
+      slackChannel: process.env.SLACK_CHANNEL || ''
+    };
+  }
+};
+
+// Helper function to write config
+const writeConfig = (config) => {
+  try {
+    const dirPath = path.dirname(CONFIG_FILE);
+    if (!fs.existsSync(dirPath)) {
+      fs.mkdirSync(dirPath, { recursive: true });
+    }
+    fs.writeFileSync(CONFIG_FILE, JSON.stringify(config, null, 2));
+    return true;
+  } catch (error) {
+    console.error('Error writing config file:', error);
+    return false;
+  }
+};
+
+// Load configuration from file or fallback to environment variables
+const config = readConfig();
+let SLACK_WEBHOOK_URL = config.slackWebhookUrl || process.env.SLACK_WEBHOOK_URL;
+let SLACK_CHANNEL = config.slackChannel || process.env.SLACK_CHANNEL;
+
+// Log loaded configuration
+console.log('Loaded configuration:');
+console.log('SLACK_WEBHOOK_URL:', SLACK_WEBHOOK_URL ? 'Set' : 'Not set');
+console.log('SLACK_CHANNEL:', SLACK_CHANNEL);
 
 // Middleware
 app.use(cors());
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'dist')));
-
-// Data file path
-const DATA_FILE = path.join(__dirname, 'data', 'records.json');
 
 // Helper function to read data
 const readData = () => {
@@ -144,6 +188,20 @@ app.post('/api/slack-config', (req, res) => {
   // Update the variables
   SLACK_WEBHOOK_URL = webhookUrl;
   SLACK_CHANNEL = channel;
+
+  // Persist the configuration to file
+  const configData = {
+    slackWebhookUrl: SLACK_WEBHOOK_URL,
+    slackChannel: SLACK_CHANNEL
+  };
+
+  const saveResult = writeConfig(configData);
+
+  if (!saveResult) {
+    console.error('Failed to save Slack configuration to file');
+  } else {
+    console.log('Slack configuration saved to file successfully');
+  }
 
   // Respond with the updated configuration
   res.json({
