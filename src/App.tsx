@@ -40,13 +40,6 @@ function App() {
     };
 
     loadRecords();
-
-    // Refresh data every minute
-    const interval = setInterval(loadRecords, 60000);
-
-    return () => {
-      clearInterval(interval);
-    };
   }, []);
 
   const handleClockInOut = (record: TimeRecord | null) => {

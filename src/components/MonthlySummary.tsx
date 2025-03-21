@@ -18,10 +18,8 @@ const MonthlySummary: React.FC<MonthlySummaryProps> = ({ records, contractHours,
   });
   const [currentTime, setCurrentTime] = useState<string>(getJSTISOString());
 
-  // Update current time every second when there's an active session
+  // Update current time every second regardless of active session
   useEffect(() => {
-    if (!activeSession) return;
-
     const timer = setInterval(() => {
       setCurrentTime(getJSTISOString());
     }, 1000);
@@ -29,7 +27,7 @@ const MonthlySummary: React.FC<MonthlySummaryProps> = ({ records, contractHours,
     return () => {
       clearInterval(timer);
     };
-  }, [activeSession]);
+  }, []);
 
   useEffect(() => {
     // Filter records for current month

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { TimeRecord, DailySession } from '../types';
-import { isToday, formatDateTime, calculateDuration, formatDuration, toJSTDate } from '../utils/formatters';
+import { isToday, formatDateTime, calculateDuration, formatDuration, toJSTDate, getJSTISOString } from '../utils/formatters';
 
 interface TodaySessionsProps {
   records: TimeRecord[];
@@ -9,6 +9,18 @@ interface TodaySessionsProps {
 const TodaySessions: React.FC<TodaySessionsProps> = ({ records }) => {
   const [todaySessions, setTodaySessions] = useState<DailySession[]>([]);
   const [totalTime, setTotalTime] = useState<number>(0);
+  const [currentTime, setCurrentTime] = useState<string>(getJSTISOString());
+
+  // Update current time every second
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setCurrentTime(getJSTISOString());
+    }, 1000);
+
+    return () => {
+      clearInterval(timer);
+    };
+  }, []);
 
   useEffect(() => {
     // 表示するレコードを選択
@@ -33,8 +45,6 @@ const TodaySessions: React.FC<TodaySessionsProps> = ({ records }) => {
       index === self.findIndex(r => r.id === record.id)
     );
 
-    console.log('Display records:', displayRecords); // デバッグ用
-
     // 日付でソートして古い順に並べる（セッション番号を割り当てるため）
     const sortedByOldestRecords = [...displayRecords].sort((a, b) => 
       toJSTDate(a.clockIn).getTime() - toJSTDate(b.clockIn).getTime()
@@ -42,7 +52,9 @@ const TodaySessions: React.FC<TodaySessionsProps> = ({ records }) => {
 
     // DailySession形式に変換
     const sessions = sortedByOldestRecords.map((record: TimeRecord) => {
-      const duration = calculateDuration(record.clockIn, record.clockOut);
+      // For active sessions, use current time for duration calculation
+      const endTime = record.clockOut || currentTime;
+      const duration = calculateDuration(record.clockIn, endTime);
 
       return {
         id: record.id,
@@ -54,13 +66,13 @@ const TodaySessions: React.FC<TodaySessionsProps> = ({ records }) => {
 
     setTodaySessions(sessions);
 
-    // 完了したセッションの合計時間を計算
+    // 全セッションの合計時間を計算（アクティブセッションも含む）
     const total = sessions.reduce((sum: number, session: DailySession) => {
       return sum + (session.duration || 0);
     }, 0);
 
     setTotalTime(total);
-  }, [records]);
+  }, [records, currentTime]);
 
   if (todaySessions.length === 0) {
     return (

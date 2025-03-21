@@ -1,3 +1,4 @@
+import { useState, useEffect } from 'react';
 import { TimeRecord } from '../types';
 import { formatDateTime, calculateDuration, formatDuration, isToday, getJSTDateString, getJSTISOString } from '../utils/formatters';
 
@@ -6,6 +7,30 @@ interface CurrentSessionProps {
 }
 
 const CurrentSession: React.FC<CurrentSessionProps> = ({ activeSession }) => {
+  const [currentTime, setCurrentTime] = useState<string>(getJSTISOString());
+  const [formattedDuration, setFormattedDuration] = useState<string>('00:00');
+
+  // Update current time every second when there's an active session
+  useEffect(() => {
+    if (!activeSession) return;
+
+    // Initial calculation
+    const duration = calculateDuration(activeSession.clockIn, currentTime);
+    setFormattedDuration(formatDuration(duration));
+
+    // Set up interval to update every second
+    const timer = setInterval(() => {
+      const newCurrentTime = getJSTISOString();
+      setCurrentTime(newCurrentTime);
+      const newDuration = calculateDuration(activeSession.clockIn, newCurrentTime);
+      setFormattedDuration(formatDuration(newDuration));
+    }, 1000);
+
+    return () => {
+      clearInterval(timer);
+    };
+  }, [activeSession]);
+
   if (!activeSession) {
     return (
       <div className="current-session">
@@ -16,11 +41,6 @@ const CurrentSession: React.FC<CurrentSessionProps> = ({ activeSession }) => {
   }
 
   const clockInTime = formatDateTime(activeSession.clockIn);
-  const currentDuration = calculateDuration(
-    activeSession.clockIn,
-    getJSTISOString()
-  );
-  const formattedDuration = formatDuration(currentDuration);
 
   // 現在の日付を取得（JST）
   const todayString = getJSTDateString(); // YYYY-MM-DD形式（JST）
