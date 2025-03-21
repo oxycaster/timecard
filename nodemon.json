@@ -1,0 +1,5 @@
+{
+  "ignore": ["data/*"],
+  "ext": "js,mjs,json,env",
+  "delay": "1000"
+}

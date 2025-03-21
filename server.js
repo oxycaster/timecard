@@ -8,6 +8,11 @@ const dotenv = require('dotenv');
 // Load environment variables
 dotenv.config();
 
+// Debug logging for environment variables
+console.log('Environment variables loaded:');
+console.log('SLACK_WEBHOOK_URL:', process.env.SLACK_WEBHOOK_URL ? 'Set' : 'Not set');
+console.log('SLACK_CHANNEL:', process.env.SLACK_CHANNEL);
+
 // Helper function to convert Date to ISO string (in JST)
 const toISOString = (date) => {
   // Add 9 hours to convert from UTC to JST
@@ -18,7 +23,7 @@ const toISOString = (date) => {
 const app = express();
 const PORT = process.env.PORT || 3000;
 let SLACK_WEBHOOK_URL = process.env.SLACK_WEBHOOK_URL;
-let SLACK_CHANNEL = process.env.SLACK_CHANNEL || '';
+let SLACK_CHANNEL = process.env.SLACK_CHANNEL;
 
 // Middleware
 app.use(cors());
@@ -59,6 +64,9 @@ const writeData = (data) => {
 
 // Helper function to send Slack notification
 const sendSlackNotification = async (message) => {
+  // Debug logging for SLACK_CHANNEL
+  console.log('sendSlackNotification called with SLACK_CHANNEL:', SLACK_CHANNEL);
+
   if (!SLACK_WEBHOOK_URL) {
     console.log('Slack webhook URL not configured. Skipping notification.');
     return;
@@ -68,22 +76,37 @@ const sendSlackNotification = async (message) => {
     // Use dynamic import for node-fetch (ES Module)
     const { default: fetch } = await import('node-fetch');
 
+    // Ensure channel is properly formatted (should start with # for public channels)
+    let channelToUse = SLACK_CHANNEL;
+    if (channelToUse && !channelToUse.startsWith('#') && !channelToUse.startsWith('@')) {
+      channelToUse = `#${channelToUse}`;
+    }
+
     // Log the request details for debugging
     console.log('Sending Slack notification:', {
       url: SLACK_WEBHOOK_URL,
       message: message,
-      channel: SLACK_CHANNEL,
+      channel: channelToUse,
     });
+
+    // Prepare request body
+    const requestBody = {
+      text: message
+    };
+
+    // Only add channel if it's defined and not empty
+    if (channelToUse) {
+      requestBody.channel = channelToUse;
+    }
+
+    console.log('Request body:', JSON.stringify(requestBody));
 
     const response = await fetch(SLACK_WEBHOOK_URL, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json'
       },
-      body: JSON.stringify({
-        text: message,
-        channel: SLACK_CHANNEL || undefined
-      })
+      body: JSON.stringify(requestBody)
     });
 
     if (!response.ok) {
