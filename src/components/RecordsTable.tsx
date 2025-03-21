@@ -5,13 +5,28 @@ interface RecordsTableProps {
   records: TimeRecord[];
 }
 
+// Interface for grouped records
+interface GroupedRecords {
+  [date: string]: TimeRecord[];
+}
+
 const RecordsTable: React.FC<RecordsTableProps> = ({ records }) => {
-  // Sort records by date (newest first)
-  const sortedRecords = [...records].sort((a, b) => {
-    return toJSTDate(b.clockIn).getTime() - toJSTDate(a.clockIn).getTime();
+  // Group records by date (based on the date field)
+  const groupedRecords: GroupedRecords = records.reduce((groups, record) => {
+    const date = record.date;
+    if (!groups[date]) {
+      groups[date] = [];
+    }
+    groups[date].push(record);
+    return groups;
+  }, {} as GroupedRecords);
+
+  // Sort dates (newest first)
+  const sortedDates = Object.keys(groupedRecords).sort((a, b) => {
+    return new Date(b).getTime() - new Date(a).getTime();
   });
 
-  if (sortedRecords.length === 0) {
+  if (records.length === 0) {
     return (
       <div className="records-table-container">
         <h3>勤務履歴</h3>
@@ -31,27 +46,52 @@ const RecordsTable: React.FC<RecordsTableProps> = ({ records }) => {
           <div className="header-cell duration-cell">勤務時間</div>
         </div>
         <div className="table-body">
-          {sortedRecords.map(record => {
-            const clockInDate = toJSTDate(record.clockIn);
-            const clockOutDate = record.clockOut ? toJSTDate(record.clockOut) : null;
-            const duration = calculateDuration(record.clockIn, record.clockOut);
+          {sortedDates.map(date => {
+            // Sort records within each date group by clock-in time
+            const dateRecords = [...groupedRecords[date]].sort((a, b) => {
+              return toJSTDate(a.clockIn).getTime() - toJSTDate(b.clockIn).getTime();
+            });
+
+            // Calculate total duration for the date
+            const totalDuration = dateRecords.reduce((total, record) => {
+              return total + (calculateDuration(record.clockIn, record.clockOut) || 0);
+            }, 0);
 
             return (
-              <div key={record.id} className="table-row">
-                <div className="table-cell date-cell">
-                  {clockInDate.toLocaleDateString('ja-JP')}
+              <div key={date} className="date-group">
+                <div className="date-header">
+                  <div className="date-label">
+                    {new Date(date).toLocaleDateString('ja-JP')}
+                  </div>
+                  <div className="date-total">
+                    合計: {formatDuration(totalDuration)}
+                  </div>
                 </div>
-                <div className="table-cell time-cell">
-                  {clockInDate.toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' })}
-                </div>
-                <div className="table-cell time-cell">
-                  {clockOutDate 
-                    ? clockOutDate.toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' })
-                    : '勤務中'}
-                </div>
-                <div className="table-cell duration-cell">
-                  {formatDuration(duration)}
-                </div>
+
+                {dateRecords.map(record => {
+                  const clockInDate = toJSTDate(record.clockIn);
+                  const clockOutDate = record.clockOut ? toJSTDate(record.clockOut) : null;
+                  const duration = calculateDuration(record.clockIn, record.clockOut);
+
+                  return (
+                    <div key={record.id} className="table-row">
+                      <div className="table-cell date-cell">
+                        {/* Date is now in the group header */}
+                      </div>
+                      <div className="table-cell time-cell">
+                        {clockInDate.toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' })}
+                      </div>
+                      <div className="table-cell time-cell">
+                        {clockOutDate 
+                          ? clockOutDate.toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' })
+                          : '勤務中'}
+                      </div>
+                      <div className="table-cell duration-cell">
+                        {formatDuration(duration)}
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
             );
           })}
