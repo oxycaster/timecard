@@ -11,6 +11,9 @@
     "lint": "eslint .",
     "preview": "vite preview"
   },
+  "volta": {
+    "node": "18.18.1"
+  },
   "dependencies": {
     "cors": "^2.8.5",
     "dotenv": "^16.4.7",
