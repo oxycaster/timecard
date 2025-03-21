@@ -6,6 +6,7 @@ import CurrentSession from './components/CurrentSession';
 import TodaySessions from './components/TodaySessions';
 import MonthlySummary from './components/MonthlySummary';
 import RecordsTable from './components/RecordsTable';
+import SlackSettings from './components/SlackSettings';
 import { fetchRecords, clockOut } from './utils/api';
 import { TimeRecord } from './types';
 import { isToday, toJSTDate, getJSTISOString } from './utils/formatters';
@@ -122,6 +123,9 @@ function App() {
       </main>
 
       <footer className="app-footer">
+        <div className="settings-section">
+          <SlackSettings />
+        </div>
         <p>© 2025 勤怠管理システム</p>
       </footer>
     </div>

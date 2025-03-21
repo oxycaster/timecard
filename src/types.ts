@@ -19,3 +19,8 @@ export interface MonthlyStats {
   daysWorked: number;
   averageHoursPerDay: number;
 }
+
+export interface SlackConfig {
+  webhookUrl: string;
+  channel: string;
+}

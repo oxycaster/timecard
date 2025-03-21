@@ -17,7 +17,8 @@ const toISOString = (date) => {
 
 const app = express();
 const PORT = process.env.PORT || 3000;
-const SLACK_WEBHOOK_URL = process.env.SLACK_WEBHOOK_URL;
+let SLACK_WEBHOOK_URL = process.env.SLACK_WEBHOOK_URL;
+let SLACK_CHANNEL = process.env.SLACK_CHANNEL || '';
 
 // Middleware
 app.use(cors());
@@ -66,6 +67,14 @@ const sendSlackNotification = async (message) => {
   try {
     // Use dynamic import for node-fetch (ES Module)
     const { default: fetch } = await import('node-fetch');
+
+    // Log the request details for debugging
+    console.log('Sending Slack notification:', {
+      url: SLACK_WEBHOOK_URL,
+      message: message,
+      channel: SLACK_CHANNEL,
+    });
+
     const response = await fetch(SLACK_WEBHOOK_URL, {
       method: 'POST',
       headers: {
@@ -73,17 +82,20 @@ const sendSlackNotification = async (message) => {
       },
       body: JSON.stringify({
         text: message,
-        channel: '#timecard-notifications' // Change this to your desired channel
+        channel: SLACK_CHANNEL || undefined
       })
     });
 
     if (!response.ok) {
-      throw new Error(`Slack API error: ${response.statusText}`);
+      const responseText = await response.text();
+      throw new Error(`Slack API error: ${response.statusText}, Response: ${responseText}`);
     }
 
     console.log('Slack notification sent successfully');
+    return true;
   } catch (error) {
     console.error('Error sending Slack notification:', error);
+    return false;
   }
 };
 
@@ -92,6 +104,29 @@ const sendSlackNotification = async (message) => {
 app.get('/api/records', (req, res) => {
   const data = readData();
   res.json(data);
+});
+
+// Get Slack configuration
+app.get('/api/slack-config', (req, res) => {
+  res.json({
+    webhookUrl: SLACK_WEBHOOK_URL || '',
+    channel: SLACK_CHANNEL || ''
+  });
+});
+
+// Update Slack configuration
+app.post('/api/slack-config', (req, res) => {
+  const { webhookUrl, channel } = req.body;
+
+  // Update the variables
+  SLACK_WEBHOOK_URL = webhookUrl;
+  SLACK_CHANNEL = channel;
+
+  // Respond with the updated configuration
+  res.json({
+    webhookUrl: SLACK_WEBHOOK_URL,
+    channel: SLACK_CHANNEL
+  });
 });
 
 // Clock in
@@ -121,7 +156,9 @@ app.post('/api/clock-in', (req, res) => {
   if (writeData(data)) {
     // Send Slack notification
     const timeString = now.toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' });
-    sendSlackNotification(`🟢 出勤しました (${timeString})`);
+    console.log('Preparing to send clock-in notification');
+    const notificationResult = sendSlackNotification(`🟢 出勤しました (${timeString})`);
+    console.log('Clock-in notification sent:', notificationResult);
 
     res.status(201).json(newRecord);
   } else {
@@ -150,7 +187,7 @@ app.post('/api/clock-out/:id', (req, res) => {
   if (writeData(data)) {
     // Calculate duration in hours and minutes
     const startTime = new Date(data.records[recordIndex].clockIn);
-    const endTime = now;
+    const endTime = new Date(data.records[recordIndex].clockOut);
     const durationMs = endTime - startTime;
     const durationMinutes = Math.floor(durationMs / (1000 * 60));
     const hours = Math.floor(durationMinutes / 60);
@@ -159,7 +196,9 @@ app.post('/api/clock-out/:id', (req, res) => {
     // Send Slack notification
     const timeString = now.toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' });
     const durationString = `${hours}時間${minutes}分`;
-    sendSlackNotification(`🔴 退勤しました (${timeString}) - 勤務時間: ${durationString}`);
+    console.log('Preparing to send clock-out notification');
+    const notificationResult = sendSlackNotification(`🔴 退勤しました (${timeString}) - 勤務時間: ${durationString}`);
+    console.log('Clock-out notification sent:', notificationResult);
 
     res.json(data.records[recordIndex]);
   } else {
