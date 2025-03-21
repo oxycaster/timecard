@@ -270,7 +270,8 @@ app.post('/api/clock-out/:id', (req, res) => {
     const startTime = new Date(data.records[recordIndex].clockIn);
     const endTime = new Date(data.records[recordIndex].clockOut);
     const durationMs = endTime - startTime;
-    const durationMinutes = Math.floor(durationMs / (1000 * 60));
+    // Use Math.round instead of Math.floor to get the correct number of minutes
+    const durationMinutes = Math.round(durationMs / (1000 * 60));
     const hours = Math.floor(durationMinutes / 60);
     const minutes = durationMinutes % 60;
 
