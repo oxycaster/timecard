@@ -6,10 +6,11 @@ import CurrentSession from './components/CurrentSession';
 import TodaySessions from './components/TodaySessions';
 import MonthlySummary from './components/MonthlySummary';
 import RecordsTable from './components/RecordsTable';
+import MonthlyTotals from './components/MonthlyTotals';
 import SlackSettings from './components/SlackSettings';
 import { fetchRecords, clockOut } from './utils/api';
 import { TimeRecord } from './types';
-import { isToday, toJSTDate, getJSTISOString } from './utils/formatters';
+import { toJSTDate, getJSTISOString } from './utils/formatters';
 
 // 月間の契約時間（時間）
 const CONTRACT_HOURS = 128;
@@ -112,6 +113,7 @@ function App() {
 
         <div className="bottom-section">
           <RecordsTable records={records} />
+          <MonthlyTotals records={records} />
         </div>
       </main>
 
