@@ -1,54 +1,86 @@
-# React + TypeScript + Vite
+# 勤怠管理システム (Timecard System)
+月128時間の業務委託契約に対応した勤怠管理システムを作成しました。ご要望に応じて、以下の機能を実装しています：
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+## 実装した機能
 
-Currently, two official plugins are available:
+1. 出勤・退勤の記録
+    - 「出勤」ボタンを押すと現在時刻が記録されます
+    - 「退勤」ボタンを押すと現在時刻が記録され、勤務時間が計算されます
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react/README.md) uses [Babel](https://babeljs.io/) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+2. 複数回の出勤・退勤に対応
+    - 1日の中で複数回の出勤・退勤を記録できるようになりました
+    - 休憩に入る際に「退勤」を押し、再開時に「出勤」を押すことで、実働時間のみを正確に記録
+    - 各セッションの開始・終了時間と勤務時間を個別に表示
 
-## Expanding the ESLint configuration
+3. 日付をまたぐセッションに対応
+    - 夜間勤務など、日付をまたぐ勤務時間も正しく記録
+    - 例：3月18日 23:50に出勤し、3月19日 0:10に退勤した場合、3月18日の勤務として20分間記録
+    - 出勤した日付を基準に勤務時間を集計
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+4. リアルタイムでの勤務時間表示
+    - 出勤中にリアルタイムで現在の経過時間を表示（時間と分で表示）
+    - 出勤中の合計勤務時間も自動的に更新（過去のセッション + 現在のセッション）
+    - 退勤ボタンを押さなくても、現在までの勤務時間を確認可能
 
-```js
-export default tseslint.config({
-  extends: [
-    // Remove ...tseslint.configs.recommended and replace with this
-    ...tseslint.configs.recommendedTypeChecked,
-    // Alternatively, use this for stricter rules
-    ...tseslint.configs.strictTypeChecked,
-    // Optionally, add this for stylistic rules
-    ...tseslint.configs.stylisticTypeChecked,
-  ],
-  languageOptions: {
-    // other options...
-    parserOptions: {
-      project: ['./tsconfig.node.json', './tsconfig.app.json'],
-      tsconfigRootDir: import.meta.dirname,
-    },
-  },
-})
+5. リアルタイムでの月間集計更新
+    - 出勤中に月間の合計勤務時間と残り時間がリアルタイムで更新
+    - 現在進行中のセッション時間も含めた月間の合計を常に表示
+    - 契約時間（128時間）に対する進捗バーもリアルタイムで更新
+
+6. 勤務時間の集計
+    - 本日の勤務状況（現在のセッション、過去のセッション一覧）を表示
+    - 日ごとの合計勤務時間を自動計算
+    - 月間の合計稼働時間を自動計算
+    - 契約時間（128時間）に対する進捗をプログレスバーで視覚化
+
+7. 勤務記録の管理
+    - 過去の勤務記録を一覧表示
+    - 日付、出勤時間、退勤時間、勤務時間を記録
+
+8. Slack通知機能
+    - 出勤・退勤時に指定したSlackチャンネル（#times_hironao）に通知を送信
+    - 出勤時には時刻を、退勤時には時刻と勤務時間を通知
+    - ファイルベースのデータ保存
+    - 勤務記録をブラウザのローカルストレージではなく、サーバー上のJSONファイル（data/records.json）に保存
+    - ブラウザのキャッシュをクリアしても記録が失われることはありません
+    - バックアップとしてブラウザのローカルストレージにも保存されるため、サーバーに接続できない場合でも過去の記録を参照可能
+
+
+## 技術的な実装詳細
+
+1. リアルタイム更新機能
+    - 1秒ごとに現在の経過時間を計算・表示するタイマーを実装
+    - 現在のセッション時間を含めた日次・月次の合計時間をリアルタイムで計算
+    - 出勤中は常に最新の勤務時間情報を表示
+
+2. 日付をまたぐセッションの処理
+    - 出勤時刻（clockIn）を基準に日付を判定するよう変更
+    - 退勤時刻が翌日になっても、出勤した日の記録として計算
+    - 月次集計も出勤時刻を基準に行うため、月末の夜間勤務も正しく集計
+
+3. データ構造
+    - 各セッションは以下の情報を持ちます：
+        - date: セッションの作成日時
+        - clockIn: 出勤時刻
+        - clockOut: 退勤時刻
+        - hours: 勤務時間（時間単位）
+
+4. ファイル保存
+    - サーバーサイドでJSONファイルとして保存
+    - APIエンドポイント（/api/records）を通じてデータの読み書きを実現
+    - フォールバックとしてローカルストレージも利用
+
+## 使い方
+
+1. サーバーを起動：
+
+```
+npm start
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+2. ブラウザで http://localhost:3000 にアクセス
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
-
-export default tseslint.config({
-  plugins: {
-    // Add the react-x and react-dom plugins
-    'react-x': reactX,
-    'react-dom': reactDom,
-  },
-  rules: {
-    // other rules...
-    // Enable its recommended typescript rules
-    ...reactX.configs['recommended-typescript'].rules,
-    ...reactDom.configs.recommended.rules,
-  },
-})
-```
+3. 基本的な使い方：
+    - 「出勤」ボタンをクリックして勤務開始を記録
+    - 勤務中は現在の経過時間と月間の合計・残り時間がリアルタイムで表示されます
+    -「退勤」
