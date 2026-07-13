@@ -7,10 +7,12 @@ import TodaySessions from './components/TodaySessions';
 import MonthlySummary from './components/MonthlySummary';
 import RecordsTable from './components/RecordsTable';
 import MonthlyTotals from './components/MonthlyTotals';
+import MonthlyBurndownChart from './components/MonthlyBurndownChart';
 import SlackSettings from './components/SlackSettings';
 import { fetchRecords, clockOut } from './utils/api';
 import { TimeRecord } from './types';
 import { toJSTDate, getJSTISOString } from './utils/formatters';
+import { getMonthKey } from './utils/monthlyStats';
 
 // 月間の契約時間（時間）
 const CONTRACT_HOURS = 128;
@@ -19,6 +21,7 @@ function App() {
   const [records, setRecords] = useState<TimeRecord[]>([]);
   const [activeSession, setActiveSession] = useState<TimeRecord | null>(null);
   const [loading, setLoading] = useState(true);
+  const [selectedBurndownMonth, setSelectedBurndownMonth] = useState(getMonthKey);
 
   useEffect(() => {
     const loadRecords = async () => {
@@ -109,6 +112,13 @@ function App() {
 
         <div className="middle-section">
           <TodaySessions records={records} />
+          <MonthlyBurndownChart
+            records={records}
+            contractHours={CONTRACT_HOURS}
+            activeSession={activeSession}
+            selectedMonth={selectedBurndownMonth}
+            onSelectedMonthChange={setSelectedBurndownMonth}
+          />
         </div>
 
         <div className="bottom-section">

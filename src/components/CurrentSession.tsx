@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { TimeRecord } from '../types';
-import { formatDateTime, calculateDuration, formatDuration, isToday, getJSTDateString, getJSTISOString } from '../utils/formatters';
+import { formatDateTime, calculateDuration, formatDuration, getJSTDateString, getJSTISOString } from '../utils/formatters';
 
 interface CurrentSessionProps {
   activeSession: TimeRecord | null;

@@ -20,6 +20,12 @@ export interface MonthlyStats {
   averageHoursPerDay: number;
 }
 
+export interface BurndownPoint {
+  date: string;
+  remainingMinutes: number;
+  idealRemainingMinutes: number;
+}
+
 export interface SlackConfig {
   webhookUrl: string;
   channel: string;
