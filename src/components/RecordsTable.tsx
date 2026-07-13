@@ -1,5 +1,5 @@
 import { TimeRecord } from '../types';
-import { formatDateTime, calculateDuration, formatDuration, toJSTDate } from '../utils/formatters';
+import { calculateDuration, formatDuration, toJSTDate } from '../utils/formatters';
 
 interface RecordsTableProps {
   records: TimeRecord[];

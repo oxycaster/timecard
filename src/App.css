@@ -95,6 +95,7 @@ body {
 .current-session,
 .today-sessions,
 .monthly-summary,
+.monthly-burndown,
 .records-table-container,
 .monthly-totals {
   background-color: white;
@@ -274,6 +275,143 @@ h3 {
 .summary-item .value {
   font-size: 1.2rem;
   color: var(--primary-color);
+}
+
+/* Monthly Burndown */
+.monthly-burndown {
+  position: relative;
+}
+
+.burndown-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+}
+
+.burndown-header h3 {
+  flex: 1;
+}
+
+.month-picker {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding-bottom: 10px;
+  font-size: 0.9rem;
+  font-weight: bold;
+  color: var(--secondary-color);
+}
+
+.month-picker input {
+  padding: 6px 8px;
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  color: var(--dark-color);
+  font: inherit;
+}
+
+.burndown-legend {
+  display: flex;
+  justify-content: flex-end;
+  gap: 18px;
+  margin: -2px 0 8px;
+  font-size: 0.85rem;
+  color: var(--secondary-color);
+}
+
+.burndown-legend span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.legend-line {
+  width: 22px;
+  border-top: 3px solid var(--primary-color);
+}
+
+.legend-line.ideal {
+  border-top-color: var(--secondary-color);
+  border-top-style: dashed;
+}
+
+.burndown-chart-wrap {
+  width: 100%;
+  overflow-x: auto;
+}
+
+.burndown-chart {
+  display: block;
+  min-width: 540px;
+  width: 100%;
+  height: auto;
+}
+
+.chart-grid-line {
+  stroke: #e9ecef;
+  stroke-width: 1;
+}
+
+.chart-axis {
+  stroke: #adb5bd;
+  stroke-width: 1;
+}
+
+.chart-y-label,
+.chart-x-label {
+  fill: var(--secondary-color);
+  font-size: 12px;
+}
+
+.chart-y-label {
+  text-anchor: end;
+}
+
+.chart-actual-line,
+.chart-ideal-line {
+  fill: none;
+  stroke-linejoin: round;
+  stroke-linecap: round;
+  vector-effect: non-scaling-stroke;
+}
+
+.chart-actual-line {
+  stroke: var(--primary-color);
+  stroke-width: 3;
+}
+
+.chart-ideal-line {
+  stroke: var(--secondary-color);
+  stroke-width: 2;
+  stroke-dasharray: 7 5;
+}
+
+.burndown-axis-label {
+  position: absolute;
+  top: 50%;
+  left: 2px;
+  color: var(--secondary-color);
+  font-size: 0.75rem;
+  writing-mode: vertical-rl;
+  transform: rotate(180deg) translateY(50%);
+}
+
+@media (max-width: 600px) {
+  .burndown-header {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .month-picker {
+    padding-bottom: 0;
+  }
+
+  .burndown-legend {
+    justify-content: flex-start;
+    margin-top: 10px;
+  }
 }
 
 /* Records Table */

@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { TimeRecord, MonthlyStats } from '../types';
-import { isCurrentMonth, calculateDuration, formatDuration, toJSTDate, getJSTISOString } from '../utils/formatters';
+import { formatDuration, getJSTISOString } from '../utils/formatters';
+import { calculateMonthlyStats } from '../utils/monthlyStats';
 
 interface MonthlySummaryProps {
   records: TimeRecord[];
@@ -30,59 +31,7 @@ const MonthlySummary: React.FC<MonthlySummaryProps> = ({ records, contractHours,
   }, []);
 
   useEffect(() => {
-    // Filter records for current month
-    const monthRecords = records.filter(record => isCurrentMonth(record.date));
-
-    // Only count completed sessions
-    const completedRecords = monthRecords.filter(record => record.clockOut !== null);
-
-    // Calculate total minutes from completed sessions
-    const completedMinutes = completedRecords.reduce((sum, record) => {
-      const duration = calculateDuration(record.clockIn, record.clockOut);
-      return sum + (duration || 0);
-    }, 0);
-
-    // Calculate minutes from active session if it exists and is in the current month
-    let activeMinutes = 0;
-    if (activeSession && isCurrentMonth(activeSession.date)) {
-      const activeDuration = calculateDuration(activeSession.clockIn, currentTime);
-      activeMinutes = activeDuration || 0;
-    }
-
-    // Total minutes is the sum of completed and active minutes
-    const totalMinutes = completedMinutes + activeMinutes;
-
-    // Convert to hours
-    const totalHours = totalMinutes / 60;
-
-    // Get unique days worked
-    const uniqueDays = new Set();
-    completedRecords.forEach(record => {
-      const date = toJSTDate(record.date).toLocaleDateString();
-      uniqueDays.add(date);
-    });
-
-    // Add active session day if it exists and is in the current month
-    if (activeSession && isCurrentMonth(activeSession.date)) {
-      const date = toJSTDate(activeSession.date).toLocaleDateString();
-      uniqueDays.add(date);
-    }
-
-    const daysWorked = uniqueDays.size;
-
-    // Calculate average hours per day
-    const averageHoursPerDay = daysWorked > 0 ? totalHours / daysWorked : 0;
-
-    // Calculate remaining hours
-    const remainingHours = Math.max(0, contractHours - totalHours);
-
-    setStats({
-      totalHours,
-      contractHours,
-      remainingHours,
-      daysWorked,
-      averageHoursPerDay
-    });
+    setStats(calculateMonthlyStats(records, contractHours, activeSession, currentTime));
   }, [records, contractHours, activeSession, currentTime]);
 
   return (
